@@ -1,5 +1,3 @@
-package com.company;
-
 public class IntNode {
     private IntNode _next;
     private int _value;
