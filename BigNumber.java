@@ -1,7 +1,7 @@
 package com.company;
 
 /**
- * Maman 15 - BigNumber class represents possibly) a very big positive integer
+ * Maman 15 - BigNumber class represents possibly a very big positive integer
  *
  * @author Gilad Battat
  * @version 2021a
