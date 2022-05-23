@@ -1,5 +1,3 @@
-package com.company;
-
 /**
  * Maman 15 - BigNumber class represents possibly a very big positive integer
  *
