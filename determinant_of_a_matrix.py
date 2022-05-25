@@ -1,7 +1,5 @@
-import math
-
-
-def search_non_zero_row(matrix: list, i):  # assuming i is a row starts with 0
+def search_non_zero_row(matrix: list, i):
+    # assuming i is a row starts with 0
     n = len(matrix)
     j = i + 1
     while j < n:
@@ -27,33 +25,41 @@ def exchange_rows(matrix: list, i, j):
     matrix[i], matrix[j] = matrix[j], matrix[i]
 
 
+def operate_gauss_on_column(matrix, i, mul):
+    if matrix[i][i] == 0:
+        j = search_non_zero_row(matrix, i)
+        if j == -1:
+            return 0
+        exchange_rows(matrix, i, j)
+        mul *= -1
+
+    if matrix[i][i] != 1:
+        mul *= matrix[i][i]
+        div_row_by_num(matrix, i, matrix[i][i])
+
+    for j in range(i + 1, len(matrix)):
+        if matrix[j][i] == 0:
+            continue
+        add_row_to_row(matrix, j, i, -matrix[j][i])
+    return mul
+
+
 def determinant(matrix):
     n = len(matrix)
-    if len(matrix) == 1:
+    if n == 1:
         return matrix[0][0]
-    if len(matrix) == 2:
+    if n == 2:
         return matrix[0][0] * matrix[1][1] - matrix[0][1] * matrix[1][0]
+
     mul = 1
     for i in range(n):
-        if matrix[i][i] == 0:
-            j = search_non_zero_row(matrix, i)
-            if j == -1:
-                return 0
-            exchange_rows(matrix, i, j)
-            mul *= -1
-        if matrix[i][i] != 1:
-            mul *= matrix[i][i]
-            div_row_by_num(matrix, i, matrix[i][i])
-        for j in range(i+1, n):
-            if matrix[j][i] == 0:
-                continue
-            add_row_to_row(matrix, j, i, -matrix[j][i])
-    print(matrix)
+        mul = operate_gauss_on_column(matrix, i, mul)
+
     return round(mul)
 
 
 def main():
-    mat = [[1, 1], [1, 1]]
+    mat = [[1, 1, 3], [1, 2, 1], [1, 1, 1]]
     print(determinant(mat))
 
 
