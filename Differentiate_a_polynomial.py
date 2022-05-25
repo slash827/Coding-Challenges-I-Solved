@@ -1,40 +1,56 @@
-def calc(res, point):
+def calc_derivative_on_point(coefficient_arr, point):
     total = 0
-    for i in range(len(res)):
-        if res[i][1] < 1:
-            continue
-        total += res[i][0] * res[i][1] * (point ** (res[i][1]-1))
+    for coeff in coefficient_arr:
+        if coeff[1] >= 1:
+            total += coeff[0] * coeff[1] * (point ** (coeff[1] - 1))
     return total
 
 
+def handle_non_linear(equ_ls, i):
+    index = equ_ls[i].index('^')
+    deg = int(equ_ls[i][index + 1:])
+    equ_ls[i] = equ_ls[i][:index - 1]
+
+    if equ_ls[i] != '' and equ_ls[i] != '-':
+        coefficient = int(equ_ls[i])
+    elif equ_ls[i] == '-':
+        coefficient = -1
+    else:
+        coefficient = 1
+    return coefficient, deg
+
+
+def handle_linear(equ_ls, i):
+    deg = 1
+    equ_ls[i] = equ_ls[i][:-1]
+
+    if equ_ls[i] != '' and equ_ls[i] != '-':
+        coefficient = int(equ_ls[i])
+    elif equ_ls[i] == '-':
+        coefficient = -1
+    else:
+        coefficient = 1
+    return coefficient, deg
+
+
 def calc_poly(equ_ls, point):
-    res = []
-    print(equ_ls)
+    coefficient_arr = []
     for i in range(len(equ_ls)):
         if equ_ls[i] == '':
             continue
-        deg = 0
-        coffee = 1
+        coefficient, deg = 1, 0
+
         if '^' in equ_ls[i]:
-            index = equ_ls[i].index('^')
-            deg = int(equ_ls[i][index+1:])
-            equ_ls[i] = equ_ls[i][:index-1]
-            if equ_ls[i] != '' and equ_ls[i] != '-':
-                coffee = int(equ_ls[i])
-            elif equ_ls[i] == '-':
-                coffee = -1
+            coefficient, deg = handle_non_linear(equ_ls, i)
+
         elif 'x' in equ_ls[i]:  # linear
-            deg = 1
-            equ_ls[i] = equ_ls[i][:-1]
-            if equ_ls[i] != '' and equ_ls[i] != '-':
-                print(f"string is {equ_ls[i]}")
-                coffee = int(equ_ls[i])
-            elif equ_ls[i] == '-':
-                coffee = -1
+            coefficient, deg = handle_linear(equ_ls, i)
+
         else:  # constant
-            coffee = int(equ_ls[i])
-        res.append([coffee, deg])
-    return calc(res, point)
+            coefficient = int(equ_ls[i])
+
+        coefficient_arr.append([coefficient, deg])
+    return calc_derivative_on_point(coefficient_arr, point)
 
 
 def differentiate(equation, point):
@@ -45,7 +61,7 @@ def differentiate(equation, point):
             i += 1
             equ_ls.insert(i-1, '+')
         i += 1
-    equation = "".join(equ_ls).split('+')
+    equation = "".join(equ_ls).split('+')[1:]
     print(equation)
     return calc_poly(equation, point)
 
