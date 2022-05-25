@@ -10,32 +10,35 @@ def eliminating_zeros(coef_and_mono: list):
         i += 1
 
 
-def creating_string(coef_and_mono: list):
-    # changing coef numbers to strings
-    for i in range(len(coef_and_mono)):
-        if coef_and_mono[i][0] == -1:
-            coef_and_mono[i][0] = '-'
-        elif coef_and_mono[i][0] == 1:
-            coef_and_mono[i][0] = '+'
-        elif coef_and_mono[i][0] > 0:
-            coef_and_mono[i][0] = '+' + str(coef_and_mono[i][0])
-        else:
-            coef_and_mono[i][0] = str(coef_and_mono[i][0])
+def creating_string(coef_and_mono_arr: list):
+    # changing coefficients numbers to strings
+    for coef_and_mono in coef_and_mono_arr:
+        if coef_and_mono[0] == -1:
+            coef_and_mono[0] = '-'
 
-    final = coef_and_mono[0][0] + coef_and_mono[0][1]
+        elif coef_and_mono[0] == 1:
+            coef_and_mono[0] = '+'
+
+        elif coef_and_mono[0] > 0:
+            coef_and_mono[0] = '+' + str(coef_and_mono[0])
+
+        else:
+            coef_and_mono[0] = str(coef_and_mono[0])
+
+    final = coef_and_mono_arr[0][0] + coef_and_mono_arr[0][1]
     if final[0] == '+':
         final = final[1:]
-    for i in range(1, len(coef_and_mono)):
-        final += coef_and_mono[i][0] + coef_and_mono[i][1]
+    for i in range(1, len(coef_and_mono_arr)):
+        final += coef_and_mono_arr[i][0] + coef_and_mono_arr[i][1]
     return final
 
 
 def add_monomials_together(coef_and_mono: list):
     i = 0
     while i < len(coef_and_mono) - 1:
-        if coef_and_mono[i][1] == coef_and_mono[i+1][1]:
-            coef_and_mono[i][0] += coef_and_mono[i+1][0]
-            del coef_and_mono[i+1]
+        if coef_and_mono[i][1] == coef_and_mono[i + 1][1]:
+            coef_and_mono[i][0] += coef_and_mono[i + 1][0]
+            del coef_and_mono[i + 1]
             i -= 1
         i += 1
 
@@ -43,7 +46,7 @@ def add_monomials_together(coef_and_mono: list):
 def sort_in_monomial(coef_and_mono: list):
     for i in range(len(coef_and_mono)):
         coef_and_mono[i][1] = ''.join(sorted(coef_and_mono[i][1]))
-    coef_and_mono = sorted(coef_and_mono, key = operator.itemgetter(2,1))
+    coef_and_mono = sorted(coef_and_mono, key=operator.itemgetter(2, 1))
     return coef_and_mono
 
 
@@ -54,9 +57,11 @@ def sep_coef_and_mono(monom: str):
     while i < len(monom) and monom[i].isdigit():
         coef += monom[i]
         i += 1
+
     if i == len(monom):
         print("error there is no variable in this monomial")
         return None
+
     monomial = monom[i:]
     if coef == '':
         coef = 1
@@ -82,8 +87,9 @@ def separate_poly(polist: list):
     while i < len(polist):
         if polist[i] == '-':
             i += 1
-            polist.insert(i-1, '+')
+            polist.insert(i - 1, '+')
         i += 1
+
     sep_list = "".join(polist).split('+')
     if sep_list[0] == '':
         del sep_list[0]
@@ -103,12 +109,14 @@ def simplify(poly: str):
     # eliminating zeros in the coef or in the monomials themselves
     eliminating_zeros(coef_and_mono)
     print(coef_and_mono)
+
     # now sorting each monomial in it's own lexicographic order
     coef_and_mono = sort_in_monomial(coef_and_mono)
 
     # adding same monomials together
     add_monomials_together(coef_and_mono)
     eliminating_zeros(coef_and_mono)
+
     # concatenating all monomials together
     final = creating_string(coef_and_mono)
     return final
