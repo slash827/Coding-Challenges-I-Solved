@@ -1,10 +1,28 @@
-def merge_dict(dict1: dict, dict2: dict):
-    for key in dict2.keys():
-        if key in dict1.keys():
-            dict1[key] += dict2[key]
-        else:
-            dict1[key] = dict2[key]
-    return dict1
+def calc_coefficient(variable, mul):
+    coefficient, i = "0", 0
+    while i < len(variable) and variable[i].isdigit():
+        coefficient += variable[i]
+        i += 1
+
+    if i == 0 and not variable[i].isdigit():
+        coefficient = mul
+    else:
+        coefficient = int(coefficient) * mul
+    return coefficient, i
+
+
+def update_coefficient_to_dict(variable, coefficient, i, is_right_side, var_dict):
+    var_name = variable[i:]
+    if var_name != '' and coefficient == 0:
+        coefficient = 1
+    if (is_right_side and var_name != "") or \
+            (not is_right_side and var_name == ""):
+        coefficient *= -1
+
+    if var_name not in var_dict.keys():
+        var_dict[var_name] = coefficient
+    else:
+        var_dict[var_name] += coefficient
 
 
 def side_to_variables(side: list, is_right_side):
@@ -13,29 +31,11 @@ def side_to_variables(side: list, is_right_side):
         if variable[0] == '-':
             mul = -1
             variable = variable[1:]
-        else: mul = 1
-
-        coef, i = "0", 0
-        while i < len(variable) and variable[i].isdigit():
-            coef += variable[i]
-            i += 1
-
-        if i == 0 and not variable[i].isdigit():
-            coef = mul
         else:
-            coef = int(coef) * mul
+            mul = 1
 
-        var_name = variable[i:]
-        if var_name != '' and coef == 0:
-            coef = 1
-        if (is_right_side and var_name != "") or \
-                (not is_right_side and var_name == ""):
-            coef *= -1
-
-        if var_name not in var_dict.keys():
-            var_dict[var_name] = coef
-        else:
-            var_dict[var_name] += coef
+        coefficient, i = calc_coefficient(variable, mul)
+        update_coefficient_to_dict(variable, coefficient, i, is_right_side, var_dict)
 
     return var_dict
 
@@ -53,7 +53,38 @@ def process_equation(equation):
     variables_coef1 = side_to_variables(first_side, False)
     variables_coef2 = side_to_variables(second_side, True)
 
-    return merge_dict(variables_coef1, variables_coef2)
+    return {**variables_coef1, **variables_coef2}
+
+
+def back_substitution(matrix, m, n):
+    j = m - 1
+    while j > 0:
+        for k in range(j):
+            matrix[k][n] -= matrix[k][j] * matrix[j][n]
+            matrix[k][j] = 0
+        j -= 1
+
+
+def delete_zero_rows(matrix, m, n, j):
+    i = j + 1
+    while i < m:
+        if matrix[i] == [0] * (n + 1):
+            del matrix[i]
+            m -= 1
+            continue
+        i += 1
+
+
+def forward_substitution(matrix, m, n, j):
+    matrix[j] = [item / matrix[j][j] for item in matrix[j]]
+    for i in range(j + 1, m):
+        prod = matrix[i][j]
+        for k in range(j, n + 1):
+            matrix[i][k] -= prod * matrix[j][k]
+
+        if matrix[i][:-1] == [0] * n and matrix[i][-1] != 0:
+            return False
+    return True
 
 
 def gauss_elimination(matrix):
@@ -66,39 +97,22 @@ def gauss_elimination(matrix):
             return None
 
         if matrix[j][j] == 0:
-            for i in range(j+1, m):
+            for i in range(j + 1, m):
                 if matrix[i][j] != 0:
                     matrix[i][j:], matrix[j][j:] = matrix[j][j:], matrix[i][j:]
                     break
-            return None
-
-        matrix[j] = [item / matrix[j][j] for item in matrix[j]]
-        for i in range(j+1, m):
-            prod = matrix[i][j]
-            for k in range(j, n+1):
-                matrix[i][k] -= prod * matrix[j][k]
-
-            if matrix[i][:-1] == [0] * n and matrix[i][-1] != 0:
+            else:
                 return None
 
-        # now deleting zero rows
-        i = j + 1
-        while i < m:
-            if matrix[i] == [0] * (n + 1):
-                del matrix[i]
-                m -= 1
-                continue
-            i += 1
+        if not forward_substitution(matrix, m, n, j):
+            return None
 
+        # now deleting zero rows
+        delete_zero_rows(matrix, m, n, j)
         j += 1
 
     # now doing back subtraction
-    j = m - 1
-    while j > 0:
-        for k in range(j):
-            matrix[k][n] -= matrix[k][j] * matrix[j][n]
-            matrix[k][j] = 0
-        j -= 1
+    back_substitution(matrix, m, n)
 
     return [row[-1] for row in matrix]
 
@@ -123,13 +137,13 @@ def solve(*equations):
     for i in range(len(all_equations_dict)):
         all_equations_dict[i] = sorted(all_equations_dict[i], reverse=True)
 
-    coef_matrix = [[item[1] for item in all_equations_dict[i]] for i in range(len(all_equations_dict))]
+    coef_matrix = [[item[1] for item in equation] for equation in all_equations_dict]
 
-    amount_of_variables = len(coef_matrix[0]) - 1
-    amount_of_equation = len(coef_matrix)
+    number_of_variables = len(coef_matrix[0]) - 1
+    number_of_equations = len(coef_matrix)
 
     # it means that it is not solvable
-    if amount_of_variables > amount_of_equation:
+    if number_of_variables > number_of_equations:
         return None
 
     all_keys = sorted(all_keys, reverse=True)[:-1]
