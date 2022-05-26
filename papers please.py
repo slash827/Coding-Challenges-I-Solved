@@ -1,6 +1,3 @@
-import operator
-
-
 class Inspector:
     countries = ['Arstotzka', 'Antegria', 'Impor', 'Kolechia', 'Obristan', 'Republia', 'United Federation']
     allow_list = []  # list of the countries allowed to enter
@@ -9,6 +6,7 @@ class Inspector:
     documents = {'passport': [], 'ID_card': [], 'access_permit': [], 'work_pass': []}
     documents.update({'grant_of_asylum': [], 'certificate_of_vaccination': [], 'diplomatic_authorization': []})
     bullet_sentences = []
+
     # a dictionary that contains type of documents and which groups need them
 
     @classmethod
@@ -27,6 +25,7 @@ class Inspector:
                 countries = [words[0]]
             else:
                 countries = cls.countries[:]
+
         # now we find the document that we should add or removed
         document = '_'.join(words[require_index + 1:])
         if is_more == 'more':
@@ -40,32 +39,35 @@ class Inspector:
         if words[:2] == ['Citizens', 'of']:
             del words[:2]
         require_index = words.index('require')  # the index of the end of the countries list
-        if words[0].lower() == 'entrants':
+
+        countries = None
+        if words[0].lower() in ['entrants', 'foreigners']:
             countries = cls.countries[:]
-        elif words[0].lower() == 'foreigners':
-            countries = cls.countries[:]
+
+        if words[0].lower() == 'foreigners':
             countries.remove('Arstotzka')
         else:
             countries = words[:require_index]  # countries equal here to the correct value
+
         for vax in vax_names:
             if vax not in cls.vaccinations:
                 cls.vaccinations[vax] = []
+
             if vac_addition == 'more':
                 cls.vaccinations[vax] += countries
                 cls.vaccinations[vax] = list(dict.fromkeys(cls.vaccinations[vax]))
             else:
                 cls.vaccinations[vax] = [x for x in cls.vaccinations[vax] if x not in countries]
-        if 'hepatitis' in cls.vaccinations.keys():
-            if 'B' in cls.vaccinations.keys():
-                cls.vaccinations['hepatitis'] += cls.vaccinations['B']
-                del cls.vaccinations['B']
-                cls.vaccinations['hepatitis B'] = cls.vaccinations.pop('hepatitis')
-        if 'yellow' in cls.vaccinations.keys():
-            if 'fever' in cls.vaccinations.keys():
-                cls.vaccinations['yellow'] += cls.vaccinations['fever']
-                del  cls.vaccinations['fever']
-                cls.vaccinations['yellow fever'] = cls.vaccinations.pop('yellow')
 
+        if all(elem in ['hepatitis', 'B'] for elem in cls.vaccinations.keys()):
+            cls.vaccinations['hepatitis'] += cls.vaccinations['B']
+            del cls.vaccinations['B']
+            cls.vaccinations['hepatitis B'] = cls.vaccinations.pop('hepatitis')
+
+        if all(elem in ['yellow', 'fever'] for elem in cls.vaccinations.keys()):
+            cls.vaccinations['yellow'] += cls.vaccinations['fever']
+            del cls.vaccinations['fever']
+            cls.vaccinations['yellow fever'] = cls.vaccinations.pop('yellow')
 
     @classmethod
     def allow_or_deny(cls, words: list):
@@ -83,35 +85,41 @@ class Inspector:
                     cls.allow_list.remove(countries[i])
 
     @classmethod
+    def eliminate_commas(cls, words):
+        i = 0  # eliminating commas
+        while i < len(words):
+            if words[i][-1] == ',':
+                words[i] = words[i][:-1]
+            if words[i].strip() == '':
+                del words[i]
+                i -= 1
+            i += 1
+
+    @classmethod
     def receive_bulletin(cls, bulletin: str):
         cls.wanted_name = ''
         sentences = bulletin.split('\n')
         print(f'sentences are: {sentences}')
         cls.bullet_sentences.append(sentences)
+
         for sentence in sentences:
             words = sentence.split(' ')
             words = [word.strip() for word in words if word.strip() != '']
-            i = 0  # eliminating commas
-            while i < len(words):
-                if words[i][-1] == ',':
-                    words[i] = words[i][:-1]
-                if words[i].strip() == '':
-                    del words[i]
-                    i -= 1
-                i += 1
+            cls.eliminate_commas(words)
+
             if words[0] == 'Allow' or words[0] == 'Deny':
                 cls.allow_or_deny(words)
-                continue
+
             elif words[0] == 'Wanted':
                 cls.wanted_name = words[-2] + ' ' + words[-1]  # last two words
-                continue
+
             elif 'vaccination' in words:
                 vax_index = words.index('vaccination')
                 require_index = words.index('require')
                 vax_addition = 'less' if 'longer' in words else 'more'
-                vax_names = words[require_index+1:vax_index]  # since the name is before the word 'vaccination'
+                vax_names = words[require_index + 1:vax_index]  # since the name is before the word 'vaccination'
                 cls.vaccination_bullet(words, vax_names, vax_addition)
-                continue
+
             else:
                 cls.require_document(words)
 
@@ -132,8 +140,9 @@ class Inspector:
                 if attribute == 'EXP':
                     exp_date = entrant[doc][attribute].split('.')
                     exp_date = [int(item) for item in exp_date]
-                    if exp_date[0] < 1982 or (exp_date[0] == 1982 and exp_date[1] < 11) or (
-                            exp_date[0] == 1982 and exp_date[1] == 11 and exp_date[2] < 22):
+
+                    if exp_date[0] < 1982 or (exp_date[0] == 1982 and exp_date[1] < 11) or \
+                            (exp_date[0] == 1982 and exp_date[1] == 11 and exp_date[2] < 22):
                         return doc.replace('_', ' ')
         return False
 
@@ -144,14 +153,17 @@ class Inspector:
         for doc in entrant.keys():
             for attribute in entrant[doc].keys():
                 ls.append([attribute, entrant[doc][attribute]])
+
         # now ls contains all the attributes of all the docs together
-        ls = sorted(ls, key=operator.itemgetter(0))
+        ls.sort(key=lambda elem: elem[1])
         for i in range(len(ls) - 1):
-            if ls[i][0] == ls[i+1][0]:  # same attribute over different doc
-                if ls[i][1] != ls[i+1][1]:
+            if ls[i][0] == ls[i + 1][0]:  # same attribute over different doc
+                if ls[i][1] != ls[i + 1][1]:
                     if ls[i][0] in ['NAME', 'NATION', 'DOB', 'ID#']:
-                        translate = {'NATION': 'nationality', 'NAME': 'name', 'DOB': 'date of birth', 'ID#': 'ID number'}
+                        translate = {'NATION': 'nationality', 'NAME': 'name', 'DOB': 'date of birth',
+                                     'ID#': 'ID number'}
                         return translate[ls[i][0]]
+
                     elif ls[i][0] != 'EXP':
                         return ls[i][0]
         return False
@@ -162,6 +174,7 @@ class Inspector:
         if 'certificate_of_vaccination' in entrant.keys():
             vaccines = entrant['certificate_of_vaccination']['VACCINES'].split(',')
             vaccines = [x.strip() for x in vaccines]
+
         for vax in cls.vaccinations:
             if nation in cls.vaccinations[vax]:
                 if 'certificate_of_vaccination' not in entrant.keys():
@@ -170,18 +183,19 @@ class Inspector:
                     return 'not vaccinated'
         return 'vaccinated'
 
-
     @classmethod
     def inspect(cls, entrant: dict):
         print(f'entrant is: {entrant}\n')
         print(f'\nvaccines are: {cls.vaccinations}')
         if not entrant.keys():
             return 'Entry denied: missing required passport.'
+
         # now we convert each key to it's dictionary format
         for key in entrant.keys():
             entrant[key] = entrant[key].split('\n')
             entrant[key] = [x.split(':') for x in entrant[key]]
             entrant[key] = {item[0].strip(): item[1].strip() for item in entrant[key]}
+
         # now the entrants should be in a good format
         name = cls.get_name(entrant)
         if name.strip() in cls.wanted_name:
@@ -192,6 +206,7 @@ class Inspector:
         is_expired = cls.check_expiration(entrant)
         if is_expired:  # it's equal to the doc name if it is expired or else false
             return f'Entry denied: {is_expired} expired.'
+
         nation = ''
         for doc in cls.documents:
             if doc in entrant.keys():
@@ -201,24 +216,30 @@ class Inspector:
                         break
                     if nation not in cls.allow_list:
                         return f'Entry denied: citizen of banned nation.'
-        if 'access_permit' in entrant.keys() and 'PURPOSE' in entrant['access_permit'].keys() and entrant['access_permit']['PURPOSE'] == 'WORK':
-                if 'Workers' in cls.documents['work_pass'] and 'work_pass' not in entrant.keys():
-                    return 'Entry denied: missing required work pass.'
+
+        if 'access_permit' in entrant.keys() and 'PURPOSE' in entrant['access_permit'].keys() and \
+                entrant['access_permit']['PURPOSE'] == 'WORK':
+            if 'Workers' in cls.documents['work_pass'] and 'work_pass' not in entrant.keys():
+                return 'Entry denied: missing required work pass.'
+
         if nation == '':
             return 'Entry denied: missing required passport.'
         # now we check that all documents exists
         if 'diplomatic_authorization' in entrant.keys():
-            if 'ACCESS' not in entrant['diplomatic_authorization'].keys() or 'Arstotzka' not in entrant['diplomatic_authorization']['ACCESS']:
+            if 'ACCESS' not in entrant['diplomatic_authorization'].keys() or \
+                    'Arstotzka' not in entrant['diplomatic_authorization']['ACCESS']:
                 return 'Entry denied: invalid diplomatic authorization.'
+
         for doc in cls.documents:
             if nation in cls.documents[doc]:
-                if doc == 'access_permit' and 'grant_of_asylum' in entrant.keys():
+                if doc == 'access_permit' and \
+                        ('grant_of_asylum' in entrant.keys() or nation == 'Arstotzka'):
                     continue
+
                 elif doc == 'access_permit' and 'diplomatic_authorization' in entrant.keys():
                     if 'Arstotzka' in entrant['diplomatic_authorization']['ACCESS']:
                         continue
-                elif doc == 'access_permit' and nation == 'Arstotzka':
-                    continue
+
                 if doc not in entrant.keys():
                     doc = doc.replace('_', ' ')
                     return f'Entry denied: missing required {doc}.'
@@ -228,6 +249,7 @@ class Inspector:
             return 'Entry denied: missing required vaccination.'
         if vax_result == 'missing certificate_of_vaccination':
             return 'Entry denied: missing required certificate of vaccination.'
+
         # from here all tests have work and entrant should pass
         print(f'\n{cls.bullet_sentences}\n')
         if nation == 'Arstotzka':
@@ -241,7 +263,14 @@ def main():
     bulletin = """Entrants require passport
     Allow citizens of Arstotzka, Obristan"""
     inspector.receive_bulletin(bulletin)
-    guyovich = {'passport': 'ID#: 8B19F-R34DV\nNATION: Republia\nNAME: Muller, Maciej\nDOB: 1956.10.21\nSEX: M\nISS: Orvech Vonor\nEXP: 1986.10.25', 'certificate_of_vaccination': 'NAME: Muller, Maciej\nID#: 8B19F-R34DV\nVACCINES: tetanus, hepatitis B, cowpox, rubella', 'access_permit': 'NAME: Muller, Maciej\nNATION: Republia\nID#: 8B19F-R34DV\nPURPOSE: WORK\nDURATION: 1 MONTH\nHEIGHT: 153cm\nWEIGHT: 48kg\nEXP: 1989.08.17'}
+
+    guyovich = {
+        'passport': 'ID#: 8B19F-R34DV\nNATION: Republia\nNAME: Muller, Maciej\nDOB: 1956.10.21\nSEX: M\nISS: Orvech '
+                    'Vonor\nEXP: 1986.10.25',
+        'certificate_of_vaccination': 'NAME: Muller, Maciej\nID#: 8B19F-R34DV\nVACCINES: tetanus,'
+                                      ' hepatitis B, cowpox, rubella',
+        'access_permit': 'NAME: Muller, Maciej\nNATION: Republia\nID#: 8B19F-R34DV\nPURPOSE: WORK\n'
+                         'DURATION: 1 MONTH\nHEIGHT: 153cm\nWEIGHT: 48kg\nEXP: 1989.08.17'}
     inspector.inspect(guyovich)
     print(inspector.documents)
 
